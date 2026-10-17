@@ -199,12 +199,13 @@
       "[hidden]{ display:none !important; }",
       "/* EN-TÊTE */",
       ".ft-header{ background:var(--f); color:var(--t); box-shadow:0 4px 8px rgba(15,20,56,.08); padding:0 1rem; }",
-      ".ft-inner{ max-width:90rem; margin:0 auto; min-height:6.25rem; display:flex; align-items:center; flex-wrap:wrap; gap:.5rem 1.5rem; padding:1.25rem 0; }",
+      ".ft-inner{ min-height:6.25rem; display:flex; align-items:center; flex-wrap:wrap; gap:.5rem 1.5rem; padding:1.25rem 0; }",
       "/* LOGOS ET TITRE */",
-      ".ft-logos{ display:flex; align-items:center; gap:1rem; flex:none; }",
+      "/* écart logos / titre : 1.5rem du conteneur + 1rem = 2.5rem (40 px) ; sous 576 px : 1.5rem - .5rem = 1rem (16 px) */",
+      ".ft-logos{ display:flex; align-items:center; gap:1rem; flex:none; margin-right:1rem; }",
       ".ft-logo{ display:flex; border-radius:.25rem; }",
       ".ft-logo-img{ display:block; height:3.75rem; width:auto; max-width:14rem; object-fit:contain; }",
-      ".ft-titre{ font-family:Marianne," + police + "; font-size:1rem; font-weight:700; line-height:1.25rem; color:var(--p); }",
+      ".ft-titre{ font-family:Marianne," + police + "; font-size:1.5rem; font-weight:700; line-height:1.2; color:var(--p); }",
       "/* NAVIGATION */",
       ".ft-nav{ flex:1 1 auto; min-width:0; }",
       ".ft-liste{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.5rem; }",
@@ -217,7 +218,7 @@
       ".ft-user-zone{ position:relative; }",
       ".ft-droite{ display:flex; align-items:center; gap:.75rem; margin-left:auto; flex:none; max-width:100%; }",
       ".ft-statut{ font-size:.875rem; }",
-      ".ft-user{ display:inline-flex; align-items:center; gap:.5rem; min-height:3rem; max-width:100%; padding:.25rem .75rem .25rem .25rem; border:0; border-radius:.75rem; background:var(--g); color:var(--t); font:inherit; font-size:1rem; font-weight:500; line-height:1.5rem; }",
+      ".ft-user{ display:inline-flex; align-items:center; gap:.5rem; min-height:3rem; max-width:100%; padding:.25rem 0; border:0; background:none; color:var(--t); font:inherit; font-size:1rem; font-weight:500; line-height:1.5rem; }",
       "button.ft-user{ cursor:pointer; }",
       "button.ft-user:hover, button.ft-user[aria-expanded=\"true\"]{ background:var(--s); color:var(--ts); }",
       ".ft-avatar{ width:2.5rem; height:2.5rem; border-radius:50%; background:var(--p); color:var(--tp); display:grid; place-items:center; flex:none; font-size:.875rem; font-weight:700; }",
@@ -240,7 +241,7 @@
       "/* ADAPTATION */",
       "@media (min-width:1240px){ .ft-header{ padding:0 1.25rem; } }",
       "@media (max-width:899px){ .ft-nav{ order:3; flex-basis:100%; } }",
-      "@media (max-width:599px){ .ft-inner{ min-height:4rem; padding:.75rem 0; } .ft-logo-img{ height:2.5rem; } .ft-user-nom{ max-width:9rem; } }"
+      "@media (max-width:575px){ .ft-inner{ min-height:4rem; padding:.75rem 0; } .ft-logos{ margin-right:-.5rem; } .ft-logo-img{ height:2.5rem; } .ft-titre{ font-size:1.125rem; } .ft-user-nom{ max-width:9rem; } }"
     ].join("\n");
   }
 
