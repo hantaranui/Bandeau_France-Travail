@@ -39,6 +39,7 @@
 
   var script = document.currentScript || document.querySelector("script[src*='bandeau'][data-titre]");
   var titreWidget = script ? (script.getAttribute("data-titre") || "").trim() : "";
+  var modePublic = !!script && script.getAttribute("data-public") === "oui";   // mode « page publique » : valeur exacte « oui » seulement
 
   var ui = null;   // éléments du bandeau, une fois construit
   var donnees = null, erreurLecture = "";
@@ -148,12 +149,12 @@
     var aPersonnes = !!(cfg["users.table"] && cfg["users.email"]), moi = null;
     if (aPersonnes) {
       try { moi = personne(await avecDelai(g.docApi.fetchTable(cfg["users.table"])), cfg); }
-      catch (e) { console.warn("[bandeau] table des personnes illisible :", msg(e)); }
+      catch (e) { if (!modePublic) console.warn("[bandeau] table des personnes illisible :", msg(e)); }
     }
     var base = "";
     if (liens.some(function (l) { return vide(l.Url) && Number(l.Page) > 0; })) {
       try { base = (await avecDelai(g.docApi.getAccessToken({ readOnly: true }))).baseUrl || ""; }
-      catch (e) { console.warn("[bandeau] adresse du document introuvable : les liens vers des pages sont ignorés (" + msg(e) + ")"); }
+      catch (e) { if (!modePublic) console.warn("[bandeau] adresse du document introuvable : les liens vers des pages sont ignorés (" + msg(e) + ")"); }
     }
     return { cfg: cfg, liens: liens, aPersonnes: aPersonnes, moi: moi, base: base };
   }
@@ -284,7 +285,7 @@
       var ouvert = groupes.filter(function (g) { return !g.panneau.hidden; })[0];
       if (ouvert) { fermerTout(); ouvert.btn.focus(); }
     });
-    document.body.insertBefore(host, document.body.firstChild);
+    if (!modePublic) document.body.insertBefore(host, document.body.firstChild);   // mode public : inséré seulement quand la personne est reconnue (voir demarrer)
     demarrer(0);
   }
 
@@ -376,9 +377,19 @@
   }
 
   function demarrer(essai) {
-    lireTout().then(function (d) { donnees = d; erreurLecture = ""; appliquer(d); }, function (e) {
+    lireTout().then(function (d) {
+      donnees = d; erreurLecture = "";
+      if (modePublic) {
+        if (!d.moi) return;   // personne non reconnue (anonyme, absente, plusieurs lignes, table illisible) : rien n'est affiché
+        appliquer(d);   // d'abord remplir, puis insérer : le bandeau n'apparaît jamais à moitié rempli
+        if (!ui.host.isConnected) document.body.insertBefore(ui.host, document.body.firstChild);
+        return;
+      }
+      appliquer(d);
+    }, function (e) {
       if (essai + 1 < DELAIS.length) { setTimeout(function () { demarrer(essai + 1); }, DELAIS[essai + 1]); return; }
       erreurLecture = msg(e);
+      if (modePublic) return;   // mode public : on abandonne en silence (ni message, ni console, ni bandeau)
       console.warn("[bandeau] menu indisponible :", erreurLecture);
       ui.statut.textContent = "Menu indisponible";   // discret : le détail est dans la console
       ui.titre.textContent = titreWidget; ui.titre.hidden = !titreWidget;   // réglages illisibles : on garde au moins le nom du widget
