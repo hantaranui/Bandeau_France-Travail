@@ -106,11 +106,20 @@
   // Adresse d'une page du document, déduite de l'adresse d'accès à l'API que Grist fournit :
   //   https://hote/o/org/api/docs/ID  ->  https://hote/o/org/ID/NOM/p/N
   // Grist écrit ses pages avec le nom du document avant « p/N » (…/ID/Menu-France-Travail/p/4). Sans ce segment, « p » est pris pour
-  // le nom du document et le numéro de page est perdu : Grist ouvre alors la première page. Le nom exact n'a pas d'importance (Grist
-  // le remplace par le vrai), on met un nom neutre.
-  function urlPage(base, n) {
+  // le nom du document et le numéro de page est perdu : Grist ouvre alors la première page. Le segment du nom est donc TOUJOURS écrit.
+  // nomDoc (réglage facultatif nom_url_document de Bandeau_config) : le nom du document tel qu'il apparaît dans son adresse
+  // (ex. Partenariat-Simplifie-DEV6). Il n'est accepté que s'il ne contient que des lettres, chiffres, tirets et tirets bas
+  // (100 caractères au plus, espaces autour ignorés) ; sinon on met le nom neutre « doc ». Avec un faux nom, Grist le remplace
+  // par le vrai mais perd alors embed=true : avec le vrai nom, la page s'ouvre directement en plein écran.
+  // pleinEcran (réglage plein_ecran = oui de Bandeau_config) : ajoute embed=true pour ouvrir la page sans les menus Grist.
+  // Sans les deux réglages, l'adresse reste identique à l'ancienne (…/ID/doc/p/N).
+  function urlPage(base, n, pleinEcran, nomDoc) {
     if (!/\/api\/docs\//.test(base || "")) return "";
-    return base.replace(/\/api\/docs\//, "/").replace(/\/+$/, "") + "/doc/p/" + n;
+    var nom = String(nomDoc == null ? "" : nomDoc).trim();
+    if (!/^[\p{L}\p{N}_-]{1,100}$/u.test(nom)) nom = "doc";   // nom absent ou invalide : repli sur « doc »
+    var u = base.replace(/\/api\/docs\//, "/").replace(/\/+$/, "") + "/" + nom + "/p/" + n;
+    if (pleinEcran && !/[?&]embed=true(&|$)/.test(u)) u += (u.indexOf("?") === -1 ? "?" : "&") + "embed=true";   // ? s'il n'y a pas encore de paramètre, & sinon, sans doublon
+    return u;
   }
   function identite(m) {
     if (!m) return { label: "Non identifié·e", initiales: "?" };
@@ -172,8 +181,9 @@
   // Un groupe apparaît à la place de son premier lien ; un groupe sans lien visible disparaît.
   function preparerMenus(d) {
     var roles = d.moi ? d.moi.roles.map(normaliser).filter(Boolean) : [];
+    var pleinEcran = String(d.cfg.plein_ecran || "").trim().toLowerCase() === "oui";   // clé facultative : absente ou autre valeur = comportement inchangé
     var visibles = trierLiens(d.liens).filter(function (l) { return l.Actif && !vide(l.Titre); }).map(function (l) {
-      var href = !vide(l.Url) ? urlHttps(l.Url) : (Number(l.Page) > 0 ? urlPage(d.base, Number(l.Page)) : "");
+      var href = !vide(l.Url) ? urlHttps(l.Url) : (Number(l.Page) > 0 ? urlPage(d.base, Number(l.Page), pleinEcran, d.cfg.nom_url_document) : "");
       if (!href) return null;
       var ic = normaliser(l.Icone);
       return { nom: String(l.Titre).trim(), href: href, nouvelOnglet: !!l.Nouvel_onglet, icone: Object.prototype.hasOwnProperty.call(ICONES, ic) && ic !== "chevron" ? ic : "",   // seulement les clés propres de ICONES (« constructor », « __proto__ » ignorés)
