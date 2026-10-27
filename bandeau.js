@@ -110,15 +110,15 @@
   // nomDoc (réglage facultatif nom_url_document de Bandeau_config) : le nom du document tel qu'il apparaît dans son adresse
   // (ex. Partenariat-Simplifie-DEV6). Il n'est accepté que s'il ne contient que des lettres, chiffres, tirets et tirets bas
   // (100 caractères au plus, espaces autour ignorés) ; sinon on met le nom neutre « doc ». Avec un faux nom, Grist le remplace
-  // par le vrai mais perd alors embed=true : avec le vrai nom, la page s'ouvre directement en plein écran.
-  // pleinEcran (réglage plein_ecran = oui de Bandeau_config) : ajoute embed=true pour ouvrir la page sans les menus Grist.
+  // par le vrai mais perd alors style=singlePage : avec le vrai nom, la page s'ouvre directement en plein écran.
+  // pleinEcran (réglage plein_ecran = oui de Bandeau_config) : ajoute style=singlePage pour ouvrir la page sans les menus Grist.
   // Sans les deux réglages, l'adresse reste identique à l'ancienne (…/ID/doc/p/N).
   function urlPage(base, n, pleinEcran, nomDoc) {
     if (!/\/api\/docs\//.test(base || "")) return "";
     var nom = String(nomDoc == null ? "" : nomDoc).trim();
     if (!/^[\p{L}\p{N}_-]{1,100}$/u.test(nom)) nom = "doc";   // nom absent ou invalide : repli sur « doc »
     var u = base.replace(/\/api\/docs\//, "/").replace(/\/+$/, "") + "/" + nom + "/p/" + n;
-    if (pleinEcran && !/[?&]embed=true(&|$)/.test(u)) u += (u.indexOf("?") === -1 ? "?" : "&") + "embed=true";   // ? s'il n'y a pas encore de paramètre, & sinon, sans doublon
+    if (pleinEcran && !/[?&]style=singlePage(&|$)/.test(u)) u += (u.indexOf("?") === -1 ? "?" : "&") + "style=singlePage";   // ? s'il n'y a pas encore de paramètre, & sinon, sans doublon
     return u;
   }
   function identite(m) {
