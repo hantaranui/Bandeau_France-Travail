@@ -16,6 +16,9 @@
      cdn.jsdelivr.net. Le reste utilise la police système, comme le prévoit le design system France Travail.
    - Dépannage : dans la console du widget, taper  BandeauMenu.etat()
 
+   - Facultatif : si la clé suivi_connexion vaut « oui » dans Bandeau_config, le bandeau écrit la date de dernière
+     connexion dans la colonne Derniere_connexion de la ligne de la personne reconnue, au plus une fois par heure.
+
    Les rôles ne servent qu'à masquer des liens dans le menu : ce n'est PAS une sécurité.
    La vraie protection reste dans les règles d'accès de Grist.
    ========================================================== */
@@ -155,7 +158,40 @@
     function champ(cle) { var c = cfg[cle] && tab[cfg[cle]]; return c ? c[k] : ""; }
     var roles = [];
     if (cfg["users.role"] && tab[cfg["users.role"]]) roles = liste(tab[cfg["users.role"]][k]);
-    return { nomComplet: champ("users.nom_complet"), prenom: champ("users.prenom"), nom: champ("users.nom"), roles: roles };
+    // Pour le suivi de connexion : numéro de la ligne de la personne et colonne de date, seulement si elle existe vraiment dans la table
+    var colDate = String(cfg["users.derniere_connexion"] || "").trim() || "Derniere_connexion";
+    var existe = colDate !== "id" && Object.prototype.hasOwnProperty.call(tab, colDate) && Array.isArray(tab[colDate]);
+    // Refus si la colonne de date est déjà utilisée par une autre clé (e-mail, rôle, nom...) : on n'écraserait pas ces données
+    ["users.email", "users.role", "users.nom_complet", "users.prenom", "users.nom"].forEach(function (cle) {
+      if (String(cfg[cle] || "").trim() === colDate) existe = false;
+    });
+    return { nomComplet: champ("users.nom_complet"), prenom: champ("users.prenom"), nom: champ("users.nom"), roles: roles,
+      idLigne: tab.id ? tab.id[k] : null, colonneConnexion: existe ? colDate : "",
+      valeurConnexion: existe ? tab[colDate][k] : null };   // valeur actuelle de la cellule, pour ne jamais écraser du texte
+  }
+
+  // Suivi de la dernière connexion (facultatif : clé suivi_connexion = oui dans Bandeau_config).
+  // Écrit la date et l'heure dans la ligne de la personne reconnue, au plus une fois par heure et par onglet.
+  // Toute erreur est ignorée en silence (pas de message, rien dans la console) : l'affichage n'en dépend jamais.
+  var CLE_SUIVI = "bandeau_suivi_connexion", PERIODE_SUIVI = 3600000;   // une heure, en millisecondes
+  function noterConnexion(d) {
+    try {
+      if (String(d.cfg.suivi_connexion || "").trim().toLowerCase() !== "oui") return;   // absent ou autre valeur : lecture seule
+      var moi = d.moi, table = d.cfg["users.table"];
+      if (!moi || !table || !moi.colonneConnexion || typeof moi.idLigne !== "number") return;   // personne non reconnue ou colonne absente
+      if (/^_grist/i.test(String(table).trim())) return;   // jamais dans les tables internes de Grist
+      var actuelle = moi.valeurConnexion;
+      var videOuNombre = actuelle === null || actuelle === undefined || actuelle === 0 || actuelle === "" || typeof actuelle === "number";
+      if (!videOuNombre) return;   // la cellule contient du texte : on ne l'écrase pas
+      var g = window.grist;
+      if (!g || !g.docApi || typeof g.docApi.applyUserActions !== "function") return;
+      var maintenant = Date.now();
+      var derniere = Number(window.sessionStorage.getItem(CLE_SUIVI));
+      if (derniere && maintenant - derniere >= 0 && maintenant - derniere < PERIODE_SUIVI) return;   // déjà noté il y a moins d'une heure
+      window.sessionStorage.setItem(CLE_SUIVI, String(maintenant));   // marque posée avant l'écriture ; si sessionStorage échoue, on n'écrit rien
+      var champs = {}; champs[moi.colonneConnexion] = Math.floor(maintenant / 1000);   // date et heure Grist = secondes
+      Promise.resolve(g.docApi.applyUserActions([["UpdateRecord", table, moi.idLigne, champs]])).catch(function () {});
+    } catch (e) { /* ignoré volontairement */ }
   }
 
   async function lireTout() {
@@ -478,9 +514,11 @@
         if (!d.moi) return;   // personne non reconnue (anonyme, absente, plusieurs lignes, table illisible) : rien n'est affiché
         appliquer(d);   // d'abord remplir, puis insérer : le bandeau n'apparaît jamais à moitié rempli
         if (!ui.host.isConnected) { document.body.insertBefore(ui.host, document.body.firstChild); evaluer(); }   // mesurable seulement une fois dans la page
+        noterConnexion(d);   // après l'affichage
         return;
       }
       appliquer(d);
+      noterConnexion(d);   // après l'affichage
     }, function (e) {
       if (essai + 1 < DELAIS.length) { setTimeout(function () { demarrer(essai + 1); }, DELAIS[essai + 1]); return; }
       erreurLecture = msg(e);
